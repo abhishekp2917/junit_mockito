@@ -1,0 +1,956 @@
+*   What are various annotations available in JUnit ?
+
+>>  Complete list of annotations in JUnit 5:
+        
+        (1) @Test
+        (2) @BeforeEach
+        (3) @AfterEach
+        (4) @BeforeAll
+        (5) @AfterAll
+        (6) @Disabled
+        (7) @Order
+        (8) @TestMethodOrder
+        (9) @Tag
+        (10) @ValueSource
+        (11) @EnumSource
+        (12) @CsvSource
+        (13) @ArgumentsSource
+        (14) @ParameterizedTest
+        (15) @TestFactory
+        (16) @RepeatedTest
+        (17) @Nested
+        (18) @Timeout
+        (19) @DisplayName
+        (20) @TestInstance
+        (21) @ExtendWith
+
+    Additional JUnit 4 annotations:
+         
+        (1) @Test
+        (2) @Before
+        (3) @After
+        (4) @BeforeClass
+        (5) @AfterClass
+        (6) @Ignore
+        (7) @RunWith
+        (8) @Rule
+        (9) @ClassRule
+        (10) @Category
+        (11) @Parameterized
+
+________________________________________________________________________________________________________________________
+
+*   What does @Test annotation do in JUnit ?
+
+>>  The @Test annotation in JUnit is used to mark a method as a test case.
+
+    When a method is annotated with @Test, the JUnit framework automatically recognizes and executes it during the test 
+    run without needing to call the method manually.
+
+    In JUnit 5, @Test comes from the org.junit.jupiter.api package and does not support attributes like expected and 
+    timeout directly. Those concerns are handled using assertThrows and @Timeout separately.
+
+    Example:
+
+        ```
+            import org.junit.jupiter.api.Test;
+            import static org.junit.jupiter.api.Assertions.assertEquals;
+
+            public class CalculatorTest {
+
+                @Test
+                void testAddition() {
+                    int result = 2 + 3;
+                    assertEquals(5, result, "Addition should be correct");
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the purpose of @BeforeEach ?
+
+>>  The @BeforeEach annotation in JUnit is used to mark a method that should run before each test method in a test class
+    typically used to perform setup tasks before every test runs.
+
+    Key Features:
+        
+        - Runs before each test method, not once per class.
+
+        - Helps avoid duplicate setup code across tests.
+
+    Example:
+
+        ```    
+            import org.junit.jupiter.api.*;
+
+            public class CalculatorTest {
+
+                private Calculator calculator;
+
+                @BeforeEach
+                void setUp() {
+                    calculator = new Calculator(); // fresh instance before each test
+                }
+
+                @Test
+                void testAddition() {
+                    Assertions.assertEquals(5, calculator.add(2, 3));
+                }
+
+                @Test
+                void testSubtraction() {
+                    Assertions.assertEquals(1, calculator.subtract(3, 2));
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the purpose of @AfterEach ?
+
+>>  To perform cleanup operations after every test — such as releasing resources, resetting states, or clearing 
+    temporary data.
+
+    Key Features:
+        
+        - Runs after each test method finishes (regardless of whether the test passes or fails).
+
+        - Ensures test isolation by cleaning up anything that may affect the next test.
+
+    Example:
+
+        ```
+            import org.junit.jupiter.api.*;
+
+            public class FileHandlerTest {
+
+                private File tempFile;
+
+                @BeforeEach
+                void setUp() throws IOException {
+                    tempFile = File.createTempFile("test", ".txt");
+                }
+
+                @Test
+                void testFileWrite() {
+                    // perform test using tempFile
+                }
+
+                @AfterEach
+                void tearDown() {
+                    if (tempFile != null && tempFile.exists()) {
+                        tempFile.delete();  // clean up after test
+                    }
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the purpose of @BeforeAll ?
+
+>>  The @BeforeAll annotation in JUnit 5 is used to mark a method that runs once before all test methods in a test class 
+    to perform one-time setup that is needed before any test runs e.g. database connection.
+
+    Key Features:
+
+        - Runs only once, before all test methods.
+
+        - The method must be static unless the test class is annotated with @TestInstance(Lifecycle.PER_CLASS).
+
+    Example:
+
+        ```
+            import org.junit.jupiter.api.*;
+
+            @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+            public class DatabaseTest {
+
+                @BeforeAll
+                void initDatabase() {
+                    System.out.println("Connecting to test database...");
+                    // connect once before all tests
+                }
+
+                @Test
+                void testQuery() {
+                    // test something with database
+                }
+
+                @Test
+                void testInsert() {
+                    // another test using the same DB connection
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the purpose of @AfterAll ?
+
+>>  The @AfterAll annotation in JUnit 5 marks a method that is run once after all the test methods in a test class 
+    have been executed.
+
+    It is used to perform one-time cleanup — like shutting down shared resources.
+
+    Key Features:
+
+        - Executes only once, after all tests in the class.
+
+        - The method must be static unless the class uses @TestInstance(TestInstance.Lifecycle.PER_CLASS).
+    
+    Example:
+
+        ```
+            import org.junit.jupiter.api.*;
+
+            @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+            public class ServerTest {
+
+                @BeforeAll
+                void startServer() {
+                    System.out.println("Starting server...");
+                    // start server once
+                }
+
+                @Test
+                void testRequestHandling() {
+                    // test server response
+                }
+
+                @AfterAll
+                void stopServer() {
+                    System.out.println("Stopping server...");
+                    // stop server after all tests
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the difference between @BeforeEach, @AfterEach, @BeforeAll and @AfterAll ?
+
+>>  (1) @BeforeEach:
+
+        - Runs before each test method.
+
+        - Used for per-test setup (e.g., initializing mocks, setting up test data).
+
+        - Does not need to be static.
+
+    (2) @AfterEach:
+
+        - Runs after each test method.
+
+        - Used for per-test cleanup (e.g., clearing database, resetting mocks).
+
+        - Does not need to be static.
+
+    (3) @BeforeAll:
+
+        - Runs once before all test methods in the class.
+
+        - Used for global setup (e.g., starting a database, loading config).
+
+        - Must be static, unless @TestInstance(TestInstance.Lifecycle.PER_CLASS) is used.
+
+    (4) @AfterAll:
+
+        - Runs once after all test methods in the class.
+
+        - Used for global cleanup (e.g., shutting down servers, closing DB).
+
+        - Must be static, unless @TestInstance(TestInstance.Lifecycle.PER_CLASS) is used.
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @Disabled in JUnit ?
+
+>>  The @Disabled annotation in JUnit 5 is used to temporarily disable a test class or method, meaning JUnit will 
+    skip execution of that test during the test run.
+
+    Useful when:
+
+        - A feature is under development.
+
+        - A test depends on external systems currently unavailable.
+
+    Example:
+
+        - Disable a single test method.
+
+            ```
+                @Disabled
+                @Test
+                void testFeatureX() {
+                    // This test will be skipped
+                }
+            ```
+
+        - Disable an entire test class.
+
+        - You can provide a reason string for documentation.
+
+            ```
+                @Disabled("Disabled until bug #1234 is fixed")
+                class PaymentServiceTest {
+
+                    @Test
+                    void testPaymentProcessing() {
+                        // Skipped
+                    }
+                }
+            ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @Order in JUnit ?
+
+>>  The @Order annotation in JUnit 5 is used to specify the order in which test methods should be executed.
+
+    Useful when test logic depends on the order (though generally discouraged — tests should be independent).
+
+    The test class must be annotated with @TestMethodOrder.
+
+    Example:
+
+        ```
+            import org.junit.jupiter.api.*;
+
+            @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+            class OrderedTest {
+
+                @Test
+                @Order(2)
+                void secondTest() {
+                    System.out.println("Second test");
+                }
+
+                @Test
+                @Order(1)
+                void firstTest() {
+                    System.out.println("First test");
+                }
+
+                @Test
+                @Order(3)
+                void thirdTest() {
+                    System.out.println("Third test");
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @TestMethodOrder in JUnit ?
+
+>>  The @TestMethodOrder is used to control the execution order of test methods within a test class to ensure tests run 
+    in a specific sequence.
+
+    JUnit does not guarantee any test order unless you explicitly use @TestMethodOrder.
+    
+    Common Method Orderers:
+
+        (1) MethodOrderer.OrderAnnotation.class : Orders methods based on @Order(int) annotations   
+        
+        (2) MethodOrderer.Alphanumeric.class : Orders by method name (alphabetically)
+        
+        (3) MethodOrderer.Random.class : Randomizes the order of test methods
+
+    Example using @Order:
+        
+        ```
+            import org.junit.jupiter.api.*;
+
+            @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+            class OrderedTests {
+
+                @Test
+                @Order(2)
+                void testB() {
+                    System.out.println("Running testB");
+                }
+
+                @Test
+                @Order(1)
+                void testA() {
+                    System.out.println("Running testA");
+                }
+
+                @Test
+                @Order(3)
+                void testC() {
+                    System.out.println("Running testC");
+                }
+            }
+        ```
+
+_______________________________________________________________________________________________________
+
+*   What is the use of @ValueSource in JUnit ?
+
+>>  The @ValueSource annotation is used in parameterized tests to supply a single array of literal values to the test method.
+
+    It is used to run the same test logic multiple times, each time with a different value provided by @ValueSource.
+
+    Supported Types:
+        
+        - short
+        - byte 
+        - int 
+        - long 
+        - float 
+        - double 
+        - char 
+        - boolean 
+        - String 
+        - Class<?>
+
+    Example:
+
+        ```
+            import org.junit.jupiter.params.ParameterizedTest;
+            import org.junit.jupiter.params.provider.ValueSource;
+            import static org.junit.jupiter.api.Assertions.assertTrue;
+
+            class ValueSourceTest {
+
+                @ParameterizedTest
+                @ValueSource(ints = {1, 2, 3, 5, 8})
+                void testWithIntValues(int number) {
+                    assertTrue(number > 0);
+                }
+
+                @ParameterizedTest
+                @ValueSource(strings = {"apple", "banana", "cherry"})
+                void testWithStringValues(String fruit) {
+                    assertTrue(fruit.length() > 0);
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @EnumSource in JUnit ?
+
+>>  The @EnumSource annotation is used in parameterized tests to provide values from an enum type as test inputs.
+
+    It is used to run the same test logic for each constant in an enum (or a filtered subset).
+
+    Example:
+        
+        ```
+            enum Direction {
+                NORTH, SOUTH, EAST, WEST
+            }
+        ```
+
+        ```
+            @ParameterizedTest
+            @EnumSource(Direction.class)
+            void testAllDirections(Direction dir) {
+                assertNotNull(dir);
+            }
+        ```
+
+    Advanced Filtering:
+
+        (1) Use names to include only specific enum constants:
+
+            ```
+                @ParameterizedTest
+                @EnumSource(value = Direction.class, names = {"NORTH", "SOUTH"})
+                void testWithSpecificDirections(Direction dir) {
+                    assertTrue(dir == Direction.NORTH || dir == Direction.SOUTH);
+                }
+            ```
+
+        (2) Use mode = EXCLUDE to exclude certain values:
+
+            ```
+                @ParameterizedTest
+                @EnumSource(value = Direction.class, names = "EAST", mode = EnumSource.Mode.EXCLUDE)
+                void testExcludingEast(Direction dir) {
+                    assertNotEquals(Direction.EAST, dir);
+                }
+            ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @CsvSource in JUnit ?
+
+>>  The @CsvSource in JUnit 5 is used with parameterized tests to pass multiple sets of input values directly from inline 
+    CSV data. 
+    
+    It allows you to test the same logic against different combinations of inputs and expected outputs.
+
+    Example:
+
+        ```
+            import org.junit.jupiter.params.ParameterizedTest;
+            import org.junit.jupiter.params.provider.CsvSource;
+            import static org.junit.jupiter.api.Assertions.assertEquals;
+
+            public class StringUtilsTest {
+
+                @ParameterizedTest
+                @CsvSource({
+                    "hello, HELLO",
+                    "world, WORLD",
+                    "'Abc', 'ABC'"
+                })
+                void testToUpper(String input, String expected) {
+                    assertEquals(expected, input.toUpperCase());
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @CsvFileSource in JUnit ?
+
+>>  The @CsvFileSource is used in parameterized tests to load test data from an external CSV file, enabling data-driven 
+    testing with large or complex datasets.
+
+    Here each row acting as one invocation of the test.
+
+    Example:
+
+        ```
+            @ParameterizedTest
+            @CsvFileSource(resources = "/test-data.csv", numLinesToSkip = 1)
+            void testFromCsvFile(String input, int expectedLength) {
+
+                assertEquals(expectedLength, input.length());
+            }
+        ```
+        
+        - CSV File present at 'resources/test-data.csv':
+
+            ```
+                input,expectedLength
+                hello,5
+                world,5
+                junit5,6
+            ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @ArgumentsSource in JUnit ?
+
+>>  The @ArgumentsSource annotation allows you to supply complex or custom arguments to a parameterized test method by 
+    referencing a custom ArgumentsProvider implementation.
+
+    To support advanced or dynamic test data injection beyond what @ValueSource, @CsvSource, or @EnumSource can handle.
+
+    Step-by-Step Usage:
+
+        (1) Create a class that implements ArgumentsProvider:
+
+            ```
+                import org.junit.jupiter.params.provider.Arguments;
+                import org.junit.jupiter.params.provider.ArgumentsProvider;
+                import org.junit.jupiter.params.provider.ArgumentsSource;
+                import org.junit.jupiter.params.ParameterizedTest;
+                import java.util.stream.Stream;
+
+                public class MyArgumentsProvider implements ArgumentsProvider {
+
+                    @Override
+                    public Stream<? extends Arguments> provideArguments(org.junit.jupiter.api.extension.ExtensionContext context) {
+                        return Stream.of(
+                            Arguments.of("java", 4),
+                            Arguments.of("junit", 5),
+                            Arguments.of("test", 4)
+                        );
+                    }
+                }
+            ```
+
+        (2) Use it in a test:
+
+            ```
+                @ParameterizedTest
+                @ArgumentsSource(MyArgumentsProvider.class)
+                void testWithCustomProvider(String word, int expectedLength) {
+                    assertEquals(expectedLength, word.length());
+                }
+            ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @ParameterizedTest in JUnit ?
+
+>>  The @ParameterizedTest annotation is used to run the same test multiple times with different input values, making 
+    it ideal for data-driven testing.
+
+    Example:
+
+        - This test runs twice, once with "hello" and once with "world".
+
+        ```
+            @ParameterizedTest
+            @ValueSource(strings = {"hello", "world"})
+            void testLength(String input) {
+
+                assertTrue(input.length() > 0);
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @Tag in JUnit ?
+
+>>  The @Tag annotation is used to categorize test methods or test classes, enabling you to filter and run specific 
+    subsets of tests.
+
+    It is used to group tests logically (e.g., @Tag("smoke"), @Tag("slow")) so that:
+     
+        - You can include or exclude them during test execution.
+
+        - Organize and manage large test suites efficiently.
+
+    Example:
+
+        ```
+            @Tag("integration")
+            @ParameterizedTest
+            @ValueSource(strings = {"data1", "data2"})
+            void integrationTest(String input) {
+                // some test code
+            }
+
+            @Tag("unit")
+            @Test
+            void unitTest() {
+                // some test code
+            }
+        ```
+
+        - To run tagged tests, specify the tag name using the <groups> element inside the <configuration> section of the Maven Surefire plugin.
+        
+        ```
+            <project>
+                <build>
+                    <plugins>
+                        <!-- Maven Plugin for running unit tests -->
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-surefire-plugin</artifactId>
+                            <version>3.1.2</version>
+                            <configuration>
+                                <!-- Include only tests tagged with "integration" -->
+                                <groups>integration</groups>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </build>
+
+            </project>
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @TestFactory in JUnit ?
+
+>>  The @TestFactory is used to define dynamic tests that can be created at runtime, allowing for dynamic test creation 
+    based on inputs, conditions, or other factors.
+
+    A DynamicTest represents a single dynamic test. 
+    
+    It can be created using DynamicTest.dynamicTest(). This factory method allows you to define a dynamic test and 
+    provides the name and the executable code (test logic).
+
+    Example:
+
+        - The Stream<DynamicTest> allows us to generate multiple tests at runtime.
+        
+        ```
+            public class CalculatorServiceTest {
+
+                private final CalculatorService calculatorService = new CalculatorService();
+
+                @TestFactory
+                Stream<DynamicTest> testIsPrime() {
+
+                    // mimicing fetching of test data from DB, API etc. 
+                    Map<Integer, Boolean> testCases = Map.of(
+                        2, true,
+                        3, true,
+                        4, false
+                    );
+
+                    return testCases.entrySet().stream()
+                        .map(entry -> dynamicTest(
+                            "Test Name",
+                            () -> assertEquals(entry.getValue(), calculatorService.isPrime(entry.getKey()))
+                        ));
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   When to choose between @TestFactory and @Test for test creation ?
+
+>>  (1) @Test:
+        
+        - It is used when test case is static i.e. logic and input are known at compile time.
+
+        - Simplicity and readability are more important than flexibility.
+
+        - You don’t need runtime control or customization over test generation.
+    
+    (2) @TestFactory:
+
+        - Use @Test with @CsvFileSource when test data is available in a CSV file. But if test data needs to be loaded 
+          dynamically from other sources like a database, API or filesystem, then prefer @TestFactory for greater control
+          and flexibility over test generation.
+
+        - You want to perform conditional test generation (e.g., skip certain tests based on a condition).
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @RepeatedTest in JUnit ?
+
+>>  The @RepeatedTest annotation is used to run the same test method multiple times to verify that a test consistently 
+    passes across multiple runs.
+
+    It helps identify tests that fail intermittently.
+
+    Example:
+
+        ```
+            import org.junit.jupiter.api.RepeatedTest;
+            import static org.junit.jupiter.api.Assertions.assertTrue;
+
+            class DiceServiceTest {
+
+                DiceService diceService = new DiceService();
+
+                @RepeatedTest(10)
+                void diceRollShouldAlwaysBeBetween1And6() {
+                    int result = diceService.roll();
+                    assertTrue(result >= 1 && result <= 6, "Dice roll should be between 1 and 6");
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @Nested in JUnit ?
+
+>>  The @Nested is used to structure tests hierarchically, which improves readability and logical grouping of related 
+    test cases.
+        
+    It is used to create inner test classes that logically group related test cases inside a test class.
+
+    Only non-static inner classes can be annotated with @Nested and each nested class can have its own lifecycle methods 
+    like @BeforeEach, @AfterEach, etc.
+
+    Example:
+
+        ```
+            class BankAccountTest {
+
+                @Test
+                void accountStartsWithZeroBalance() {
+                    // test code
+                }
+
+                @Nested
+                class WhenDepositing {
+
+                    @Test
+                    void balanceIncreases() {
+                        // test code for deposit
+                    }
+
+                    @Test
+                    void allowsMultipleDeposits() {
+                        // test code for multiple deposits
+                    }
+                }
+
+                @Nested
+                class WhenWithdrawing {
+
+                    @Test
+                    void balanceDecreases() {
+                        // test code for withdrawal
+                    }
+
+                    @Test
+                    void throwsExceptionIfInsufficientFunds() {
+                        // test code for exception
+                    }
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @Timeout in JUnit ?
+
+>>  The @Timeout is used to ensure that a test completes within a specified duration else it fails automatically.
+
+    It is used to detect performance bottlenecks in code and prevent long-running tests from blocking the test suite.
+
+    it can be applied at method or class level where class-level timeout applies to all test methods in the class.
+
+    Example:
+
+        ```
+            import org.junit.jupiter.api.Test;
+            import org.junit.jupiter.api.Timeout;
+            import java.util.concurrent.TimeUnit;
+
+            class TimeoutExampleTest {
+
+                @Test
+                @Timeout(value = 2, unit = TimeUnit.SECONDS)
+                void shouldCompleteWithinTwoSeconds() throws InterruptedException {
+                    // This will pass if it completes within 2 seconds
+                    Thread.sleep(1500); 
+                }
+
+                @Test
+                @Timeout(1) // Defaults to seconds
+                void shouldFailIfTakesMoreThanOneSecond() throws InterruptedException {
+                    Thread.sleep(1500); // This will fail
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @DisplayName in JUnit ?
+
+>>  The @DisplayName is used to provide a custom, human-readable name for a test class or test method. 
+
+    This name appears in test reports and IDEs instead of the method or class name, making the output more descriptive 
+    and readable.
+
+    Example:
+
+        ```
+            import org.junit.jupiter.api.DisplayName;
+            import org.junit.jupiter.api.Test;
+
+            @DisplayName("Calculator Service Test Cases")
+            class CalculatorServiceTest {
+
+                @Test
+                @DisplayName("Should return true for prime number 7")
+                void testIsPrimeWithSeven() {
+                    // test logic here
+                }
+
+                @Test
+                @DisplayName("Should return false for non-prime number 9")
+                void testIsPrimeWithNine() {
+                    // test logic here
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @TestInstance in JUnit ?
+
+>>  @TestInstance tells JUnit how to manage test class objects during test execution.
+
+    (1) Lifecycle.PER_METHOD (default):
+
+        - JUnit creates a new object of your test class for every test method.
+
+        - This keeps tests isolated.
+
+        - But @BeforeAll and @AfterAll methods must be static.
+
+    (2) Lifecycle.PER_CLASS:
+
+        - JUnit creates one object only, and uses it for all test methods.
+
+        - You can now write @BeforeAll and @AfterAll methods as non-static.
+
+        - You can share data/state between tests using instance variables.
+
+    Example:
+
+        - In this case only one instance of 'MyTest' is created.
+
+        ```
+            @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+            class MyTest {
+
+                @BeforeAll
+                void setup() {
+                    // no need for static now
+                }
+
+                @Test
+                void test1() {}
+
+                @Test
+                void test2() {}
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of @ExtendWith in JUnit ?
+
+>>  The @ExtendWith is used to attach custom or third-party extension that can modify or extend the behavior of test 
+    classes or methods. 
+
+    How It Works:
+        
+        - You specify one or more extensions that should be applied to a test class or method.
+
+        - The extension class has special methods that can hook into the test execution, such as before the test runs
+          or after it finishes.
+
+    Example: 
+
+        - @ExtendWith(CustomTestExtension.class) registers the CustomTestExtension to run before each test execution where 
+          beforeTestExecution method is called.
+        
+        ```
+            import org.junit.jupiter.api.*;
+            import org.junit.jupiter.api.extension.*;
+
+            class CustomTestExtension implements BeforeTestExecutionCallback {
+
+                @Override
+                public void beforeTestExecution(ExtensionContext context) throws Exception {
+                    System.out.println("Before executing test: " + context.getDisplayName());
+                }
+            }
+        ```
+        
+        ```
+            @ExtendWith(CustomTestExtension.class)  // Register the custom extension
+            class MyTest {
+
+                @Test
+                void testMethod() {
+                    System.out.println("Running test...");
+                }
+            }
+        ```
+
+    Some Common Built-in Extensions:
+
+        (1) @ExtendWith(MockitoExtension.class) : For Mockito integration.
+
+        (2) @ExtendWith(SpringExtension.class) : For Spring-based tests.
+
+        (3) @ExtendWith(TimeoutExtension.class) : For setting timeouts on tests.
+
+________________________________________________________________________________________________________________________
+
+
+
+
