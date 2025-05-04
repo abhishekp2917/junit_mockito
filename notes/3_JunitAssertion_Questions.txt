@@ -1,0 +1,336 @@
+*   What are assertions in JUnit ? Give examples.
+
+>>  Assertions in JUnit are static methods used to verify the expected outcome of a test. 
+
+    They compare the actual result of a method with the expected value. If the assertion fails, the test fails.
+
+    Commonly Used Assertions:
+
+        (1) assertEquals(expected, actual):	
+        
+            - Checks if two values are equal	
+
+                ```
+                    assertEquals(5, calculator.add(2, 3));
+                ```
+
+        (2) assertNotEquals(unexpected, actual):
+        	
+            - Fails if both values are equal	
+
+                ```
+                    assertNotEquals(4, calculator.add(2, 2));
+                ```
+
+        (3) assertTrue(condition):
+        	
+            - Passes if condition is true	
+
+                ```
+                    assertTrue(user.isActive());
+                ```
+        
+        (4) assertFalse(condition):
+        	
+            - Passes if condition is false	
+
+                ```
+                    assertFalse(user.isDeleted());
+                ```
+        
+        (5) assertNull(value):	
+        
+            - Passes if value is null	
+
+                ```
+                    assertNull(repository.findById(0));
+                ```
+            
+        (6) assertNotNull(value):	
+        
+            - Passes if value is not null	
+
+                ```
+                    assertNotNull(user.getEmail());
+                ```
+
+        (7) assertArrayEquals(expectedArray, actualArray):
+        	
+            - Compares two arrays	
+            
+                ```
+                    assertArrayEquals(new int[]{1,2}, sort([2,1]));
+                ```
+
+        (8) assertThrows(Exception.class, executable)	
+        
+            - Verifies an exception is thrown	
+            
+                ```
+                    assertThrows(IllegalArgumentException.class, () -> method(null));
+                ```
+
+        (9) assertAll(...)	
+        
+            - Group multiple assertions	
+
+                ```
+                    assertAll(
+                        () -> assertNotNull(obj), 
+                        () -> assertEquals(5, list.size()));
+                ```
+        
+        (10) fail(message):	
+        
+            - Fails test unconditionally	
+
+                ```
+                    fail("Not implemented yet");
+                ```
+    
+    Example:
+
+        ```
+            @Test
+            void testAddition() {
+                Calculator calc = new Calculator();
+                int result = calc.add(2, 3);
+
+                assertEquals(5, result, "Addition result should be 5");
+                assertNotEquals(6, result, "Result should not be 6");
+                assertTrue(result > 0, "Result should be positive");
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   Explain the difference between assertEquals() and assertSame().
+
+>>  (1) Purpose:
+
+        - assertEquals verifies that two values are logically equal using .equals().
+
+        - assertSame() verifies that two references point to the exact same object using ==.
+
+    (2) Internally Uses:
+
+        - assertEquals() calls the .equals() method.
+
+        - assertSame() uses the == operator.
+
+    (3) Pass Example:
+
+        ```
+            assertEquals(new String("abc"), new String("abc")); 
+        ```
+
+        ```
+            String a = "abc"; 
+            assertSame(a, a);
+        ```
+
+    (4) Fail Example:
+
+        ```
+            assertEquals(new String("abc"), new String("xyz"));
+        ```
+        
+        ```
+            assertSame(new String("abc"), new String("abc"));
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What is assertTrue() and assertFalse() used for ?
+
+>>  (1) assertTrue(condition):
+
+        - Asserts that the given condition is true.
+
+        - Test passes if the condition is true, else test fails.
+
+        Example:
+
+            ```
+                @Test
+                void testIsAdult() {
+                    int age = 20;
+                    assertTrue(age >= 18, "Person should be considered an adult");
+                }
+            ```
+
+    (2) assertFalse(condition):
+
+        - Asserts that the given condition is false.
+
+        - Test passes if the condition is false, else test fails.
+
+        Example:
+
+            ```
+                @Test
+                void testIsNegative() {
+                    int number = -5;
+                    assertFalse(number > 0, "Number should not be positive");
+                }
+            ```
+
+________________________________________________________________________________________________________________________
+
+*   How do you group multiple assertions together (JUnit 5's assertAll) ?
+
+>>  You can group multiple assertions using assertAll(). 
+
+    This allows all assertions to be evaluated, and you get a combined failure report instead of stopping at the first 
+    failure.
+
+    If you use individual assertions, the test stops at the first failure. 
+    
+    assertAll() reports all assertion failures together, making it easier to diagnose multiple issues in one run.
+
+    Example:
+
+        - All assertions are executed even if some fail.
+
+        ```
+            import static org.junit.jupiter.api.Assertions.*;
+            import org.junit.jupiter.api.Test;
+
+            class PersonTest {
+
+                @Test
+                void testPersonAttributes() {
+                    Person person = new Person("John", "Doe", 30);
+
+                    assertAll("person",
+                        () -> assertEquals("John", person.getFirstName(), "First name should be John"),
+                        () -> assertEquals("Doe", person.getLastName(), "Last name should be Doe"),
+                        () -> assertTrue(person.getAge() > 18, "Age should be greater than 18")
+                    );
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   How do you test exceptions in JUnit 4 and JUnit 5 ?
+
+>>  (1) JUnit 4:
+
+        - Use the expected parameter in @Test or use ExpectedException rule.
+
+        Example:
+
+            (a) Using @Test(expected=...):
+
+                ```
+                    @Test(expected = IllegalArgumentException.class)
+                    public void testExceptionThrown() {
+                        someService.methodThatThrows(); // Should throw IllegalArgumentException
+                    }
+                ```
+            
+            (b) Using ExpectedException Rule:
+                
+                ```
+                    @Rule
+                    public ExpectedException exception = ExpectedException.none();
+
+                    @Test
+                    public void testExceptionMessage() {
+                        exception.expect(IllegalArgumentException.class);
+                        exception.expectMessage("Invalid ID");
+                        someService.methodThatThrows(); // Should throw IllegalArgumentException
+                    }
+                ```
+
+    (2) JUnit 5:
+
+        - Use Assertions.assertThrows().
+
+            ```
+                @Test
+                void testExceptionThrown() {
+                    Exception ex = assertThrows(IllegalArgumentException.class, () -> {
+                        someService.methodThatThrows();
+                    });
+                    assertEquals("Invalid ID", ex.getMessage());
+                }
+            ```
+
+________________________________________________________________________________________________________________________
+
+*   Explain the difference between assertThrows and ExpectedException rule.
+
+>>  (1) Library Version:
+
+        - assertThrows introduced in JUnit 5.
+
+        - ExpectedException used in JUnit 4.
+
+    (2) Syntax Style:
+
+        - assertThrows uses lambda expression for the code that should throw an exception.
+
+        - ExpectedException uses a @Rule and imperative setup.
+
+    (3) Code Scope:
+
+        - In assertThrows, only the lambda code block is expected to throw exception.
+
+        - In expectedException, entire method must conform unless guarded carefully.
+
+________________________________________________________________________________________________________________________
+
+*   What is assertTimeout() used for in JUnit 5 ?
+
+>>  In JUnit 5, assertTimeout() is used to verify that a block of code completes within a specified duration. 
+
+    If the code takes longer than the specified timeout, the test fails, but the code is still allowed to complete execution.
+
+    If you want the test to be aborted as soon as the timeout is exceeded, use assertTimeoutPreemptively() instead.
+
+    Example:
+
+        ```
+            import java.time.Duration;
+            import org.junit.jupiter.api.Test;
+
+            @Test
+            void testShouldCompleteInTime() {
+                assertTimeout(Duration.ofMillis(100), () -> {
+                    // Simulate a task
+                    Thread.sleep(50);
+                });
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What are differences between assertTimeout(), assertTimeoutPreemptively() and @TimeOut annotation ?
+
+>>  (1) assertTimeout(Duration, Executable):
+
+        - It asserts that a code block completes within the given duration.
+
+        - Test fails if time is exceeded, but code still runs completely.
+
+        - Runs the test code in the same thread.
+
+    (2) assertTimeoutPreemptively(Duration, Executable):
+
+        - It is similar to assertTimeout, but terminates execution if the duration is exceeded.
+
+        - Test fails and code is forcibly stopped if time is exceeded.
+
+        - Runs the test code in a separate thread.
+
+    (3) @Timeout:
+
+        - Sets a time limit on test methods or test classes.
+
+        - Fails test after timeout, but doesn’t forcibly stop running code
+
+        - Runs the test code in the same thread.
+
+________________________________________________________________________________________________________________________

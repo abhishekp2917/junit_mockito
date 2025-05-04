@@ -642,6 +642,8 @@ ________________________________________________________________________________
                             <configuration>
                                 <!-- Include only tests tagged with "integration" -->
                                 <groups>integration</groups>
+                                <!-- Exclude only tests tagged with "unit" -->
+                                <excludedGroups>unit</excludedGroups>
                             </configuration>
                         </plugin>
                     </plugins>
@@ -951,6 +953,25 @@ ________________________________________________________________________________
 
 ________________________________________________________________________________________________________________________
 
+*   What is the use of @SpringBootTest ? When can it be ignored ?
 
+>>  @SpringBootTest is an annotation that tells Spring Boot to start the full application context when running tests.
 
+    It boots up the entire Spring ApplicationContext, autowires all your Spring beans and enables testing of real 
+    integrations: controllers, services, repositories, etc.
 
+    Use it when:
+
+        - Your test relies on Spring-managed beans, configurations, or properties.
+
+        - You want to verify behavior in a near-production-like environment.
+
+    When You Can Ignore @SpringBootTest:
+
+        - You're writing unit tests — testing a single class/method in isolation.
+
+        - Your class has no Spring dependencies or can be constructed with new.
+
+        - You want fast execution — @SpringBootTest slows things down due to context loading.
+
+________________________________________________________________________________________________________________________

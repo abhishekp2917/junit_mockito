@@ -284,54 +284,41 @@ ________________________________________________________________________________
 
 ________________________________________________________________________________________________________________________
 
+*   What are the differences in JUnit 4 and JUnit 5 ?
 
+>>  (1) Architecture:
 
+        - JUnit 4 is monolithic i.e. everything in a single junit.jar.
 
+        - JUnit 5 has modular architecture with three components:
 
+            - JUnit Platform
+            - JUnit Jupiter
+            - JUnit Vintage (backward compatibility with JUnit 4)
 
+    (2) Parameterized Tests:
 
+        - Implementing parameterized tests in JUnit 4 is complex as it requires a separate class and constructor.
 
+        - It is simple in JUnit 5 using @ParameterizedTest with sources like:
 
+            - @ValueSource
+            - @CsvSource
+            - @CsvFileSource
+            - @EnumSource
+            - @ArgumentsSource
 
-*   What are assertions in JUnit ? Give examples.
+    (3) Dynamic Tests:
 
->>
+        - It is not available in JUnit 4.
 
-________________________________________________________________________________________________________________________
+        - JUnit 5 introduced @TestFactory and DynamicTest to generate tests at runtime.
 
-*   Explain the difference between assertEquals() and assertSame().
+    (4) Compatibility:
 
->>
+        - Only supports JUnit 4.
 
-________________________________________________________________________________________________________________________
-
-*   What is assertTrue() and assertFalse() used for?
-
->>
-
-________________________________________________________________________________________________________________________
-
-*   How do you test exceptions in JUnit 4 and JUnit 5 ?
-
->>
-
-________________________________________________________________________________________________________________________
-
-*   How do you group multiple assertions together (JUnit 5's assertAll) ?
-
->>
-
-________________________________________________________________________________________________________________________
-
-*   Explain the difference between assertThrows and ExpectedException rule.
-
->>
-
-________________________________________________________________________________________________________________________
-
-*   What is assertTimeout() used for in JUnit 5 ?
-
->>
+        - Supports both JUnit 5 (Jupiter) and JUnit 4 (Vintage engine) tests.
 
 ________________________________________________________________________________________________________________________
 
@@ -402,7 +389,403 @@ ________________________________________________________________________________
         
 ________________________________________________________________________________________________________________________
 
-*   How to execute Junit Test Cases in Spring Application ?
+*   Why Field Injection is harder to test compare to Constructor or Setter Injection ?
+
+>>  (1) No way to pass dependencies manually:
+
+        - In field injection, dependencies are private and set internally by the framework (e.g., Spring).
+
+        - You can’t use a constructor or method to inject dependencies in your unit tests.
+
+        - So, you need reflection or @InjectMocks to access and set those private fields.
+
+    (2) Tight coupling with Spring:
+
+        - Field-injected classes can’t be instantiated outside the Spring context unless you use advanced mocking or 
+          reflection tools.
+
+        - That makes writing pure unit tests (outside Spring) harder.
+
+    (3) Hidden dependencies:
+
+        - Unit tests are clearer when all required dependencies are visible (via constructor).
+
+        - With field injection, the class doesn’t reveal what it depends on — you have to dig into private fields
+
+________________________________________________________________________________________________________________________
+
+*   Explain use of various SpringBootTest.WebEnvironment in detail.
+
+>>  The @SpringBootTest provides a webEnvironment parameter that controls how the embedded web server is started during 
+    the test.
+
+    (1) WebEnvironment.MOCK (Default):
+
+        - Loads a mock servlet environment, does not start an actual web server (like Tomcat).
+
+        - It is useful for testing controllers and REST APIs using MockMvc.
+
+        - Can use @AutoConfigureMockMvc to autowire MockMvc and simulate HTTP requests.
+
+        Example:
+
+            ```
+                @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+                @AutoConfigureMockMvc
+                class UserControllerMockTest {
+
+                    @Autowired
+                    private MockMvc mockMvc;
+
+                    @Test
+                    void testGetUsers() throws Exception {
+                        mockMvc.perform(get("/users"))
+                            .andExpect(status().isOk())
+                            .andExpect(jsonPath("$.length()").value(3));
+                    }
+                }
+            ```
+
+    (2) WebEnvironment.RANDOM_PORT:
+
+        - Starts an embedded web server (e.g., Tomcat) on a random available port.
+
+        - Use this when you want to perform real HTTP calls (not mocks).
+
+        - Use @LocalServerPort to get the actual port, and TestRestTemplate to send HTTP requests.
+
+        Example:    
+
+            ```
+                @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+                class UserControllerRandomPortTest {
+
+                    @LocalServerPort
+                    private int port;
+
+                    @Autowired
+                    private TestRestTemplate restTemplate;
+
+                    @Test
+                    void testGetUsers() {
+                        String url = "http://localhost:" + port + "/users";
+                        ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
+                        assertEquals(HttpStatus.OK, response.getStatusCode());
+                        assertNotNull(response.getBody());
+                    }
+                }
+            ```
+
+    (3) WebEnvironment.DEFINED_PORT:
+
+        - Starts the embedded server on the port defined in application.properties or default 8080.
+
+        - Used when your test or app requires a fixed port.
+
+        Example:
+
+            ```
+                @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+                class UserControllerDefinedPortTest {
+
+                    @Autowired
+                    private TestRestTemplate restTemplate;
+
+                    @Test
+                    void testGetUsers() {
+                        String url = "http://localhost:8081/users";
+                        ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
+                        assertEquals(HttpStatus.OK, response.getStatusCode());
+                    }
+                }
+            ```
+
+    (4) WebEnvironment.NONE:
+
+        - No web environment at all — no Servlet context, no web server, only Spring beans are loaded.
+
+        - Use it only for non-controller testing such as services, repositories etc that don’t need web stuff.
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of TestRestTemplate ? 
+
+>>  TestRestTemplate is primarily used to test REST controllers by simulating actual HTTP calls (GET, POST, etc.).
+
+    Interact with a real Spring Boot application running on a real (random or defined) port.
+
+    It’s a Spring-managed bean pre-configured with base URL (http://localhost:<randomPort>).
+
+    Example:
+
+        ```
+            @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+            public class MyControllerTest {
+
+                @Autowired
+                private TestRestTemplate restTemplate;
+
+                @Test
+                public void shouldReturnGreeting() {
+                    ResponseEntity<String> response = restTemplate.getForEntity("/greet", String.class);
+                    Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+                    Assertions.assertEquals("Hello, World!", response.getBody());
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   What are the differences between TestRestTemplate and RestTemplate ?
+
+>>  (1) Purpose:
+
+        - TestRestTemplate is designed specifically for integration testing of Spring Boot REST controllers.
+        
+        - RestTemplate is a general-purpose HTTP client used in production code to make REST calls.
+
+    (2) Auto-configuration:
+        
+        - TestRestTemplate is auto-configured and injected via @Autowired when using @SpringBootTest(webEnvironment = RANDOM_PORT or DEFINED_PORT).
+        
+        - RestTemplate is not auto-configured and must be explicitly created/configured (via @Bean or manually).
+
+    (3) URL Handling:
+            
+        - TestRestTemplate can use relative URLs like /api/hello as domain and port comes pre-defined.
+
+        - RestTemplate requires absolute URLs like http://localhost:8080/api/hello.
+
+    (4) Replacement Status:
+
+        - TestRestTemplate is still used in testing (though WebTestClient is preferred for reactive apps).
+
+        - RestTemplate is deprecated for new development (Spring recommends WebClient instead).
+
+________________________________________________________________________________________________________________________
+
+*   What is the use of MockMvc ?
+
+>>  MockMvc is a Spring testing utility used to test Spring MVC controllers by simulating HTTP requests to your 
+    controller endpoints without starting an HTTP server (e.g. Tomcat).
+    
+    The @AutoConfigureMockMvc annotation in Spring Boot is used to automatically configure the MockMvc bean when 
+    writing integration tests with @SpringBootTest so that you don't have to create and manage the MockMvc bean.
+
+    Example:
+
+        ```
+            @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+            @AutoConfigureMockMvc
+            class UserControllerMockTest {
+
+                @Autowired
+                private MockMvc mockMvc;
+
+                @Test
+                void testGetUsers() throws Exception {
+                    mockMvc.perform(get("/users"))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.length()").value(3));
+                }
+            }
+        ```
+
+________________________________________________________________________________________________________________________
+
+*   How do you test private methods in JUnit ?
+
+>>  In general, private methods should not be tested directly. Instead, test them indirectly through public or protected 
+    methods that use them. 
+
+    However, if absolutely necessary, one can use Reflection.
+
+    ```
+        import java.lang.reflect.Method;
+
+        @Test
+        void testPrivateSquareMethod() throws Exception {
+            Calculator calc = new Calculator();
+
+            Method method = Calculator.class.getDeclaredMethod("square", int.class);
+            method.setAccessible(true);
+
+            int result = (int) method.invoke(calc, 4);
+            assertEquals(16, result);
+        }
+
+    ```
+
+________________________________________________________________________________________________________________________
+
+*   How do you run multiple test classes together ?
+
+>>  You can run multiple test classes together using the @Suite feature provided by the junit-platform-suite module.
+
+    (1) Include the dependency:
+
+        - Add the junit-platform-suite dependency as it doesn't come along with spring-boot-starter-test.
+
+            ```
+                <dependency>
+                    <groupId>org.junit.platform</groupId>
+                    <artifactId>junit-platform-suite</artifactId>
+                    <scope>test</scope>
+                </dependency>
+            ```
+
+    (2) Create a Suite class:
+
+        - Create a suite class by annotated with @Suite annotation.
+
+        - Specify the test classes that needs to be part of the suite in @SelectClasses annotation. 
+
+            ```
+                import org.junit.platform.suite.api.SelectClasses;
+                import org.junit.platform.suite.api.Suite;
+
+                @Suite
+                @SelectClasses({
+                    CalculatorControllerTests.class,
+                    UserServiceTests.class,
+                    OrderServiceTests.class
+                })
+                public class AllTestsSuite {
+                    // No code needed. This will run all specified test classes.
+                }
+            ```
+
+    (3) Run the suite class.
+
+________________________________________________________________________________________________________________________
+
+*   Explain the use of DynamicTest in JUnit 5.
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   How is JUnit 5 architecture different from JUnit 4?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   Explain the role of the TestEngine in JUnit 5.
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   How do you integrate JUnit with Maven?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   How do you run JUnit tests automatically during a Maven build?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   What is the role of the Surefire plugin in Maven related to JUnit tests?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   Can you run JUnit tests in parallel ? How ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   What is test coverage and how do you measure it with JUnit ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   How do you integrate JUnit tests with a CI/CD pipeline (e.g., Jenkins)?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   What are best practices for writing good JUnit tests ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   What should you avoid when writing unit tests ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   What is mocking, and when should you mock in unit tests ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   What is stubbing in unit testing ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   How would you structure a JUnit test class? (AAA Pattern: Arrange, Act, Assert)
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   Why are some tests failing only sometimes (flaky tests) ? How to fix them ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   What to do if a test case depends on system time ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   What happens if a test method throws an unexpected exception ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   How do you deal with database interactions in JUnit tests ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   How do you handle multi-threading scenarios in JUnit tests ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   How does JUnit support TDD ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   Why is isolation important in unit testing ?
+
+>>
+
+________________________________________________________________________________________________________________________
+
+*   Can we use JUnit for performance testing ? If yes, how ?
 
 >>
 
@@ -410,69 +793,3 @@ ________________________________________________________________________________
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-What is parameterized testing ? How to implement it in JUnit 5 ?
-
-How do you test private methods in JUnit?
-
-How do you ignore a test in JUnit 4 vs JUnit 5?
-
-How do you run multiple test classes together?
-
-Explain the use of DynamicTest in JUnit 5.
-
-How is JUnit 5 architecture different from JUnit 4?
-
-Explain the role of the TestEngine in JUnit 5.
-
-How do you integrate JUnit with Maven?
-
-How do you use JUnit with Mockito for mocking?
-
-How do you run JUnit tests automatically during a Maven build?
-
-What is the role of the Surefire plugin in Maven related to JUnit tests?
-
-Can you run JUnit tests in parallel ? How?
-
-What is test coverage and how do you measure it with JUnit ?
-
-How do you integrate JUnit tests with a CI/CD pipeline (e.g., Jenkins)?
-
-What are best practices for writing good JUnit tests ?
-
-What should you avoid when writing unit tests ?
-
-What is mocking, and when should you mock in unit tests ?
-
-What is stubbing in unit testing ?
-
-How would you structure a JUnit test class? (AAA Pattern: Arrange, Act, Assert)
-
-Why are some tests failing only sometimes (flaky tests) ? How to fix them ?
-
-What to do if a test case depends on system time ?
-
-What happens if a test method throws an unexpected exception ?
-
-How do you deal with database interactions in JUnit tests ?
-
-How do you handle multi-threading scenarios in JUnit tests ?
-
-How does JUnit support TDD ?
-
-Why is isolation important in unit testing ?
-
-Can we use JUnit for performance testing ? If yes, how ?
